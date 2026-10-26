@@ -42,9 +42,9 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           # ---- Tes réglages ----
-          MIN_DISCOUNT_PERCENT: "30"   # remise minimale en % pour être prévenu
+          MIN_DISCOUNT_PERCENT: "5"   # remise minimale en % pour être prévenu
           MIN_REGULAR_PRICE: "0"       # prix normal minimal en € (ex: 10 pour ignorer les petits jeux)
-          MAX_ALERTS_PER_RUN: "30"     # nombre maximum d'alertes par passage
+          MAX_ALERTS_PER_RUN: "50"     # nombre maximum d'alertes par passage
           # ----------------------
           TEST_DISCORD: ${{ inputs.test_discord }}
         run: python3 nintendo_deals.py
