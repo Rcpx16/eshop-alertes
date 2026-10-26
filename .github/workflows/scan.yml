@@ -1,0 +1,60 @@
+name: Surveillance eShop
+
+on:
+  schedule:
+    # Toutes les 5 minutes (minutes 2, 7, 12... pour éviter les heures pleines,
+    # où GitHub est le plus chargé et retarde les tâches).
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test_discord:
+        description: "Envoyer seulement un message de test sur Discord"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: surveillance-eshop
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Calculer la clé du cache du catalogue
+        id: cachekey
+        run: echo "block=$(date -u +%Y%m%d)-$(( $(date -u +%-H) / 6 ))" >> "$GITHUB_OUTPUT"
+
+      - name: Restaurer le catalogue
+        uses: actions/cache@v4
+        with:
+          path: data/catalog.json
+          key: catalog-${{ steps.cachekey.outputs.block }}
+          restore-keys: catalog-
+
+      - name: Lancer la surveillance
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # ---- Tes réglages ----
+          MIN_DISCOUNT_PERCENT: "30"   # remise minimale en % pour être prévenu
+          MIN_REGULAR_PRICE: "0"       # prix normal minimal en € (ex: 10 pour ignorer les petits jeux)
+          MAX_ALERTS_PER_RUN: "30"     # nombre maximum d'alertes par passage
+          # ----------------------
+          TEST_DISCORD: ${{ inputs.test_discord }}
+        run: python3 nintendo_deals.py
+
+      - name: Enregistrer la mémoire des promos
+        run: |
+          if [ -n "$(git status --porcelain data/state.json)" ]; then
+            git config user.name "eshop-bot"
+            git config user.email "eshop-bot@users.noreply.github.com"
+            git add data/state.json
+            git commit -m "Mise à jour des promos mémorisées"
+            git push || (git pull --rebase && git push)
+          fi
